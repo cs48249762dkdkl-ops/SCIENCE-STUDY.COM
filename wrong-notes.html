@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SCIENCE STUDY | 오답 노트</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f5f5f2;color:#111;font-family:Arial,"Noto Sans KR",sans-serif}header{padding:20px 7%;border-bottom:1px solid #ddd}.logo{font-size:22px;font-weight:800;letter-spacing:1px}.logo small{display:block;color:#666;font-size:10px;letter-spacing:2px}main{width:min(920px,88%);margin:auto}.hero{padding:75px 0 55px;border-bottom:1px solid #ddd}.eyebrow{color:#666;font-size:12px;font-weight:700;letter-spacing:3px}h1{margin:18px 0 25px;font-size:clamp(45px,8vw,82px);line-height:1;letter-spacing:-4px}p{line-height:1.7;color:#555}.summary{display:flex;gap:12px;flex-wrap:wrap;padding:35px 0}.summary div{padding:18px 24px;background:#111;color:#fff}.summary strong{display:block;font-size:27px}.summary span{color:#bbb;font-size:12px}.filters{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:24px}select{padding:13px;border:1px solid #aaa;background:#fff;font:inherit}.attempt{margin-bottom:28px}.attempt h2{font-size:24px;border-bottom:2px solid #111;padding-bottom:12px}.attempt h2 span{font-size:14px;color:#666;font-weight:400}.note{padding:24px;margin:14px 0;background:#fff;border:1px solid #ddd}.note small{color:#777;font-weight:700}.note h3{margin:10px 0;font-size:19px}.note p{margin:8px 0}.answer{color:#23764a}.picked{color:#b23a32}.empty{padding:30px;background:#fff;border:1px solid #ddd}.history{padding:25px;margin:35px 0 70px;background:#fff;border:1px solid #ddd}.history h2{margin-top:0}.history li{margin:9px 0;line-height:1.6}footer{padding:35px 7%;border-top:1px solid #ddd;color:#777;font-size:12px}@media(max-width:700px){main{width:90%}}
+</style>
+</head>
+<body>
+<header><div class="logo">SCIENCE STUDY<small>SCIENCE LEARNING APP</small></div></header>
+<main>
+  <section class="hero">
+    <div class="eyebrow">WRONG ANSWER NOTES · APPLICATION 13</div>
+    <h1>오답 노트</h1>
+    <p>지난 퀴즈에서 틀린 문제와 해설, 날짜별 풀이 기록을 확인하세요. 기록은 이 브라우저에 저장됩니다.</p>
+  </section>
+
+  <div class="summary">
+    <div><strong id="attemptCount">0</strong><span>풀이 횟수</span></div>
+    <div><strong id="wrongCount">0</strong><span>누적 오답</span></div>
+  </div>
+
+  <div class="filters">
+    <select id="subject" aria-label="오답 분야 선택">
+      <option value="">전체 분야</option>
+      <option>천문학</option>
+      <option>물리학</option>
+      <option>생물학</option>
+      <option>화학</option>
+      <option>지질학</option>
+    </select>
+    <select id="date" aria-label="풀이 날짜 선택">
+      <option value="">모든 날짜</option>
+    </select>
+  </div>
+
+  <div id="notes"></div>
+
+  <section class="history">
+    <h2>풀이 기록</h2>
+    <ol id="history"></ol>
+  </section>
+</main>
+<footer>SCIENCE STUDY · WRONG ANSWER NOTES</footer>
+
+<script>
+const KEY="scienceStudyQuizHistoryV2";
+const subject=document.getElementById("subject");
+const date=document.getElementById("date");
+const notes=document.getElementById("notes");
+const history=document.getElementById("history");
+let attempts=[];
+
+function readAttempts(){
+  try{
+    const saved=JSON.parse(localStorage.getItem(KEY)||"[]");
+    return Array.isArray(saved)?saved:[];
+  }catch(error){return []}
+}
+
+function el(tag,text,className){
+  const node=document.createElement(tag);
+  node.textContent=text;
+  if(className)node.className=className;
+  return node;
+}
+
+function refresh(){
+  const selectedDate=date.value;
+  date.replaceChildren(new Option("모든 날짜",""));
+  const dates=[...new Set(attempts.map(a=>a.date).filter(Boolean))].sort().reverse();
+  dates.forEach(d=>date.add(new Option(d,d)));
+  if(dates.includes(selectedDate))date.value=selectedDate;
+
+  document.getElementById("attemptCount").textContent=attempts.length;
+  document.getElementById("wrongCount").textContent=attempts.reduce(
+    (n,a)=>n+(Array.isArray(a.answers)?a.answers.filter(x=>!x.correct).length:0),0
+  );
+
+  render();
+  renderHistory();
+}
+
+function render(){
+  notes.replaceChildren();
+  const selected=attempts.map((attempt,index)=>({...attempt,index}))
+    .filter(a=>!date.value||a.date===date.value).reverse();
+  let shown=0;
+
+  selected.forEach(a=>{
+    const wrong=(Array.isArray(a.answers)?a.answers:[])
+      .filter(x=>!x.correct&&(!subject.value||x.subject===subject.value));
+    if(!wrong.length)return;
+
+    shown+=wrong.length;
+    const section=document.createElement("section");
+    section.className="attempt";
+    section.append(el("h2",`${a.date||"날짜 미상"} · ${a.score}/${a.total||25}점 · ${a.index+1}회차`));
+
+    wrong.forEach(item=>{
+      const card=document.createElement("article");
+      card.className="note";
+      card.append(
+        el("small",item.subject),
+        el("h3",item.question),
+        el("p",`내 답: ${item.choices?.[item.selected]??"기록 없음"}`,"picked"),
+        el("p",`정답: ${item.choices?.[item.answer]??"기록 없음"}`,"answer"),
+        el("p",item.explanation||"")
+      );
+      section.append(card);
+    });
+
+    notes.append(section);
+  });
+
+  if(!shown)notes.append(el(
+    "p",
+    attempts.length
+      ? "선택한 조건에 해당하는 오답이 없습니다."
+      : "저장된 풀이가 없습니다. 퀴즈를 채점하면 이곳에 기록됩니다.",
+    "empty"
+  ));
+}
+
+function renderHistory(){
+  history.replaceChildren(...attempts.map((a,index)=>
+    el("li",`${a.date||"날짜 미상"} · ${a.score}/${a.total||25}점 · ${index+1}회차`)
+  ).reverse());
+  if(!attempts.length)history.append(el("li","아직 풀이 기록이 없습니다."));
+}
+
+function syncFromQuiz(incoming){
+  if(!Array.isArray(incoming)||!incoming.length)return;
+
+  const merged=[...attempts];
+  const seen=new Set(merged.map(a=>JSON.stringify(a)));
+
+  incoming.forEach(a=>{
+    if(!a||typeof a!=="object")return;
+    const key=JSON.stringify(a);
+    if(!seen.has(key)){
+      seen.add(key);
+      merged.push(a);
+    }
+  });
+
+  merged.sort((a,b)=>
+    String(a.completedAt||a.date||"").localeCompare(
+      String(b.completedAt||b.date||"")
+    )
+  );
+
+  attempts=merged;
+  try{
+    localStorage.setItem(KEY,JSON.stringify(attempts));
+  }catch(error){}
+  refresh();
+}
+
+function startLocalFileBridge(){
+  if(location.protocol!=="file:")return;
+
+  const iframe=document.createElement("iframe");
+  iframe.hidden=true;
+  iframe.setAttribute("aria-hidden","true");
+
+  const url=new URL("quiz.html",location.href);
+  url.searchParams.set("historyBridge","1");
+  iframe.src=url.href;
+
+  window.addEventListener("message",event=>{
+    if(event.source!==iframe.contentWindow)return;
+
+    if(event.data?.type==="SCIENCE_STUDY_BRIDGE_READY"){
+      iframe.contentWindow.postMessage(
+        {type:"SCIENCE_STUDY_REQUEST_HISTORY"},
+        "*"
+      );
+    }else if(event.data?.type==="SCIENCE_STUDY_HISTORY"){
+      syncFromQuiz(event.data.history);
+      iframe.remove();
+    }
+  });
+
+  document.body.append(iframe);
+}
+
+subject.addEventListener("change",render);
+date.addEventListener("change",render);
+
+window.addEventListener("pageshow",()=>{
+  const stored=readAttempts();
+  if(stored.length>=attempts.length){
+    attempts=stored;
+    refresh();
+  }
+});
+
+window.addEventListener("storage",event=>{
+  if(event.key===KEY){
+    attempts=readAttempts();
+    refresh();
+  }
+});
+
+attempts=readAttempts();
+refresh();
+startLocalFileBridge();
+</script>
+</body>
+</html>

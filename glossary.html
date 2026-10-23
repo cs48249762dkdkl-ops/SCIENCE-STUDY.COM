@@ -1,0 +1,409 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SCIENCE STUDY | 과학 자료 검색</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #f5f5f2; color: #111; font-family: Arial, "Noto Sans KR", sans-serif; }
+    header { padding: 20px 7%; border-bottom: 1px solid #ddd; }
+    .logo { font-size: 22px; font-weight: 800; letter-spacing: 1px; }
+    .logo small { display: block; color: #666; font-size: 10px; letter-spacing: 2px; }
+    main { width: min(1100px, 88%); margin: auto; }
+    .hero { padding: 75px 0 55px; border-bottom: 1px solid #ddd; }
+    .eyebrow { color: #666; font-size: 12px; font-weight: 700; letter-spacing: 3px; }
+    h1 { margin: 18px 0 25px; font-size: clamp(45px, 8vw, 82px); line-height: 1; letter-spacing: -4px; }
+    .hero p, .hint { line-height: 1.7; color: #555; }
+    .search-form { display: flex; gap: 12px; flex-wrap: wrap; padding: 35px 0 8px; }
+    input, select, button { font: inherit; padding: 15px; border: 1px solid #aaa; background: #fff; color: #111; }
+    input { flex: 1; min-width: 230px; }
+    select { min-width: 150px; }
+    button { border-color: #111; background: #111; color: #fff; font-weight: 700; cursor: pointer; }
+    button:hover { background: #444; }
+    input:focus-visible, select:focus-visible, button:focus-visible, a:focus-visible {
+      outline: 3px solid #5078b8;
+      outline-offset: 2px;
+    }
+    .hint { margin: 0 0 20px; font-size: 13px; }
+    .results { display: grid; gap: 28px; padding: 18px 0 80px; }
+    .source { border-top: 2px solid #111; padding-top: 15px; }
+    .source-heading { display: flex; justify-content: space-between; align-items: baseline; gap: 15px; flex-wrap: wrap; }
+    .source h2 { margin: 0; font-size: 28px; }
+    .source-heading span { font-size: 12px; color: #666; }
+    .source-link { display: inline-block; margin-top: 12px; color: #111; font-size: 13px; text-decoration: underline; text-underline-offset: 3px; }
+    .cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-top: 18px; }
+    .card { display: block; padding: 24px; border: 1px solid #ddd; background: #fff; min-height: 165px; }
+    .card:hover { border-color: #111; box-shadow: 0 12px 30px #00000012; }
+    .card small { color: #666; font-weight: 700; font-size: 11px; letter-spacing: 1px; }
+    .card h3 { margin: 12px 0 8px; font-size: 20px; line-height: 1.4; }
+    .card p { margin: 0; color: #555; line-height: 1.65; font-size: 14px; }
+    .status { margin: 18px 0 0; padding: 20px; background: #fff; border: 1px solid #ddd; color: #555; }
+    .source a { color: inherit; }
+    footer { padding: 35px 7%; border-top: 1px solid #ddd; color: #777; font-size: 12px; }
+    @media (max-width: 700px) {
+      main { width: 90%; }
+      .cards { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo">SCIENCE STUDY<small>SCIENCE LEARNING APP</small></div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="eyebrow">SCIENCE DISCOVERY · APPLICATION 13</div>
+      <h1>과학 자료 검색</h1>
+      <p>외부 자료에서 과학 개념, NASA 과학 기사, 학술 논문을 찾아보세요. 결과를 누르면 원문 사이트로 이동합니다.</p>
+    </section>
+
+    <form id="searchForm" class="search-form">
+      <input id="query" type="search" placeholder="예: 블랙홀, climate change" aria-label="과학 자료 검색어" required maxlength="100">
+      <select id="category" aria-label="분야 선택">
+        <option value="">전체 분야</option>
+        <option value="astronomy">천문학</option>
+        <option value="physics">물리학</option>
+        <option value="biology">생물학</option>
+        <option value="chemistry">화학</option>
+        <option value="geology">지질학</option>
+      </select>
+      <button type="submit">외부 자료 검색 →</button>
+    </form>
+
+    <p class="hint">뉴스와 논문은 영어 검색어가 더 잘 검색됩니다. 결과를 불러오지 못해도 각 자료원의 공식 검색 페이지로 이동할 수 있습니다.</p>
+
+    <div id="results" class="results" aria-live="polite">
+      <section class="source">
+        <div class="source-heading">
+          <h2>과학 개념</h2>
+          <span>한국어 위키백과</span>
+        </div>
+        <div id="concepts" class="cards"></div>
+        <p id="conceptStatus" class="status">검색어를 입력해 주세요.</p>
+      </section>
+
+      <section class="source">
+        <div class="source-heading">
+          <h2>NASA 과학 기사</h2>
+          <span>NASA 자료 · 영어 검색 권장</span>
+        </div>
+        <div id="news" class="cards"></div>
+        <p id="newsStatus" class="status">검색어를 입력해 주세요.</p>
+      </section>
+
+      <section class="source">
+        <div class="source-heading">
+          <h2>학술 논문</h2>
+          <span>Crossref 학술 메타데이터 · 영어 자료</span>
+        </div>
+        <div id="papers" class="cards"></div>
+        <p id="paperStatus" class="status">검색어를 입력해 주세요.</p>
+      </section>
+    </div>
+  </main>
+
+  <footer>SCIENCE STUDY · EXTERNAL SCIENCE SEARCH</footer>
+
+  <script>
+    const form = document.getElementById("searchForm");
+    const queryInput = document.getElementById("query");
+    const categoryInput = document.getElementById("category");
+
+    const sources = [
+      {
+        box: document.getElementById("concepts"),
+        status: document.getElementById("conceptStatus")
+      },
+      {
+        box: document.getElementById("news"),
+        status: document.getElementById("newsStatus")
+      },
+      {
+        box: document.getElementById("papers"),
+        status: document.getElementById("paperStatus")
+      }
+    ];
+
+    const categoryTerms = {
+      astronomy: "astronomy",
+      physics: "physics",
+      biology: "biology",
+      chemistry: "chemistry",
+      geology: "geology"
+    };
+
+    const englishTerms = {
+      "우주": "space",
+      "별": "star",
+      "블랙홀": "black hole",
+      "행성": "planet",
+      "달": "moon",
+      "태양": "sun",
+      "지구": "earth",
+      "기후": "climate",
+      "세포": "cell",
+      "유전자": "gene",
+      "화학": "chemistry",
+      "물리": "physics",
+      "생물": "biology",
+      "지질": "geology",
+      "천문": "astronomy",
+      "중력": "gravity"
+    };
+
+    let requestId = 0;
+
+    function englishQuery(value) {
+      let translated = value;
+      for (const [ko, en] of Object.entries(englishTerms)) {
+        translated = translated.replaceAll(ko, en);
+      }
+      return translated;
+    }
+
+    function plain(html) {
+      const doc = new DOMParser().parseFromString(html || "", "text/html");
+      return doc.body.textContent.trim();
+    }
+
+    function safeLink(value) {
+      try {
+        const url = new URL(value);
+        return url.protocol === "https:" ? url.href : null;
+      } catch {
+        return null;
+      }
+    }
+
+    function card(data) {
+      const link = safeLink(data.url);
+      if (!link) return null;
+
+      const node = document.createElement("a");
+      node.className = "card";
+      node.href = link;
+      node.target = "_blank";
+      node.rel = "noopener noreferrer";
+
+      const small = document.createElement("small");
+      const title = document.createElement("h3");
+      const detail = document.createElement("p");
+
+      small.textContent = data.label;
+      title.textContent = data.title;
+      detail.textContent = data.description;
+
+      node.append(small, title, detail);
+      return node;
+    }
+
+    function show(index, items, emptyMessage) {
+      const { box, status } = sources[index];
+      const nodes = items.map(card).filter(Boolean);
+
+      box.replaceChildren(...nodes);
+      status.hidden = nodes.length > 0;
+      status.textContent = nodes.length ? "" : emptyMessage;
+    }
+
+    function sourceLink(index, label, url) {
+      const section = sources[index].box.closest(".source");
+      section.querySelector(".source-link")?.remove();
+
+      const link = document.createElement("a");
+      link.className = "source-link";
+      link.textContent = label;
+      link.href = url;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+
+      section.querySelector(".source-heading").after(link);
+    }
+
+    async function getJSON(url) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 20000);
+
+      try {
+        const response = await fetch(url, { signal: controller.signal });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return await response.json();
+      } finally {
+        clearTimeout(timer);
+      }
+    }
+
+    async function searchConcepts(term, category, id) {
+      const params = new URLSearchParams({
+        action: "query",
+        list: "search",
+        srsearch: term + (
+          category ? " " + categoryInput.selectedOptions[0].textContent : ""
+        ),
+        srlimit: "6",
+        format: "json",
+        origin: "*"
+      });
+
+      try {
+        const data = await getJSON(
+          `https://ko.wikipedia.org/w/api.php?${params}`
+        );
+
+        if (id !== requestId) return;
+
+        const items = (data.query?.search || []).map(item => ({
+          label: "WIKIPEDIA",
+          title: item.title,
+          description: plain(item.snippet).slice(0, 210),
+          url: `https://ko.wikipedia.org/?curid=${item.pageid}`
+        }));
+
+        show(0, items, "관련 개념을 찾지 못했습니다.");
+      } catch {
+        if (id === requestId) {
+          show(0, [], "위키백과의 결과를 불러오지 못했습니다.");
+        }
+      }
+    }
+
+    async function searchNews(term, category, id) {
+      const words = [
+        englishQuery(term),
+        categoryTerms[category]
+      ].filter(Boolean).join(" ");
+
+      const params = new URLSearchParams({
+        search: words,
+        per_page: "6"
+      });
+
+      let failed = false;
+      let items = [];
+
+      for (const host of ["science.nasa.gov", "www.nasa.gov"]) {
+        try {
+          const data = await getJSON(
+            `https://${host}/wp-json/wp/v2/search?${params}`
+          );
+
+          if (id !== requestId) return;
+
+          items = (Array.isArray(data) ? data : []).map(item => ({
+            label: "NASA SCIENCE ARTICLE",
+            title: plain(item.title),
+            description: "NASA 원문에서 자세한 내용을 확인하세요.",
+            url: item.url
+          }));
+
+          if (items.length) break;
+        } catch {
+          failed = true;
+        }
+      }
+
+      if (id !== requestId) return;
+
+      show(
+        1,
+        items,
+        failed
+          ? "NASA 결과를 불러오지 못했습니다. 위의 'NASA에서 직접 검색' 링크를 이용해 주세요."
+          : "NASA에 일치하는 기사가 없습니다. 위의 공식 검색 링크도 확인해 보세요."
+      );
+    }
+
+    async function searchPapers(term, category, id) {
+      const words = [
+        englishQuery(term),
+        categoryTerms[category]
+      ].filter(Boolean).join(" ");
+
+      const params = new URLSearchParams({
+        "query.bibliographic": words,
+        rows: "6",
+        filter: "type:journal-article"
+      });
+
+      try {
+        const data = await getJSON(
+          `https://api.crossref.org/works?${params}`
+        );
+
+        if (id !== requestId) return;
+
+        const items = (data.message?.items || []).map(item => ({
+          label: `CROSSREF · ${
+            item.published?.["date-parts"]?.[0]?.[0] || "연도 미상"
+          }`,
+          title: item.title?.[0] || "제목 없음",
+          description: [
+            item["container-title"]?.[0],
+            item.author
+              ?.slice(0, 2)
+              .map(a => [a.given, a.family].filter(Boolean).join(" "))
+              .join(", ")
+          ].filter(Boolean).join(" · "),
+          url: item.DOI
+            ? `https://doi.org/${item.DOI}`
+            : item.URL
+        }));
+
+        show(
+          2,
+          items,
+          "관련 논문이 없습니다. 위의 Crossref 공식 검색도 확인해 보세요."
+        );
+      } catch {
+        if (id === requestId) {
+          show(
+            2,
+            [],
+            "논문 결과를 불러오지 못했습니다. 위의 'Crossref에서 직접 검색' 링크를 이용해 주세요."
+          );
+        }
+      }
+    }
+
+    form.addEventListener("submit", event => {
+      event.preventDefault();
+
+      const term = queryInput.value.trim();
+      const category = categoryInput.value;
+      if (!term) return;
+
+      const id = ++requestId;
+      const english = [
+        englishQuery(term),
+        categoryTerms[category]
+      ].filter(Boolean).join(" ");
+
+      sourceLink(
+        1,
+        "NASA에서 직접 검색 ↗",
+        `https://science.nasa.gov/?s=${encodeURIComponent(english)}`
+      );
+
+      sourceLink(
+        2,
+        "Crossref에서 직접 검색 ↗",
+        `https://search.crossref.org/?q=${encodeURIComponent(english)}`
+      );
+
+      sources.forEach(({ box, status }) => {
+        box.replaceChildren();
+        status.hidden = false;
+        status.textContent = "외부 자료를 검색하는 중…";
+      });
+
+      Promise.allSettled([
+        searchConcepts(term, category, id),
+        searchNews(term, category, id),
+        searchPapers(term, category, id)
+      ]);
+    });
+  </script>
+</body>
+</html>
